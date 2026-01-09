@@ -6,6 +6,7 @@ import { Settings, RefreshCw, Moon, Sun, X } from "lucide-react";
 import { Task } from "./types";
 import { TaskCard } from "./components/TaskCard";
 import { SettingsPage } from "./components/Settings";
+import { OnboardingGuide } from "./components/OnboardingGuide";
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
 
@@ -18,6 +19,7 @@ function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
   const [bgOpacity, setBgOpacity] = useState(0.9);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -41,6 +43,11 @@ function App() {
       const opacity = await store.get<number>('window_opacity');
       if (opacity) setBgOpacity(opacity);
       applyWindowSettings(anchorPos, alwaysOnTop);
+
+      const hasSeenOnboarding = await store.get<boolean>('has_seen_onboarding');
+      if (!hasSeenOnboarding) {
+        setShowOnboarding(true);
+      }
 
       if (themePref) {
         setTheme(themePref as "light" | "dark");
@@ -133,6 +140,46 @@ function App() {
     await store.set('theme', newTheme);
     await store.save();
   };
+
+  const handleCloseOnboarding = async () => {
+    setShowOnboarding(false);
+    const store = await Store.load('settings.json');
+    await store.set('has_seen_onboarding', true);
+    await store.save();
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl + R: Refresh
+      if (e.ctrlKey && (e.key === 'r' || e.key === 'R')) {
+        e.preventDefault();
+        if (credentials) {
+          fetchTasks(credentials.token, credentials.dbId);
+        }
+      }
+      // Ctrl + ,: Settings
+      if (e.ctrlKey && e.key === ',') {
+        e.preventDefault();
+        setView("settings");
+      }
+      // Esc: Hide window (if in tasks view and not onboarding)
+      if (e.key === 'Escape') {
+        if (showOnboarding) {
+          handleCloseOnboarding();
+        } else if (view === 'settings') {
+          setView('tasks');
+        } else {
+          getCurrentWindow().hide();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [credentials, showOnboarding, view]);
 
   if (view === "settings") {
     return <SettingsPage
@@ -236,6 +283,13 @@ function App() {
         )
         }
       </main >
+
+      {showOnboarding && (
+        <OnboardingGuide
+          onClose={handleCloseOnboarding}
+          theme={theme}
+        />
+      )}
     </div >
   );
 }

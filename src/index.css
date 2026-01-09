@@ -14,12 +14,20 @@
     --brand-bg-dark: #121212;
   }
 
+  html,
+  body,
+  #root {
+    height: 100%;
+    width: 100%;
+    background-color: var(--window-bg, transparent);
+  }
+
   body {
-    @apply antialiased text-brand-dark bg-white;
+    @apply antialiased text-brand-dark;
   }
 
   .dark body {
-    @apply bg-brand-dark text-white;
+    @apply text-white;
   }
 }
 

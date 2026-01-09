@@ -16,11 +16,13 @@
         "saving": "Saving...",
         "saved": "Saved",
         "tabs": {
+            "guide": "Guide",
             "notion": "Notion",
             "behavior": "Behavior",
             "window": "Window"
         },
         "headers": {
+            "guide": "User Guide",
             "notion": "Notion Setup",
             "behavior": "Behavior",
             "window": "Window Aesthetics",
@@ -68,5 +70,22 @@
     },
     "task": {
         "overdue": "Overdue"
+    },
+    "onboarding": {
+        "welcome": "Welcome to PlanIt!",
+        "intro": "Your personal productivity companion.",
+        "steps": {
+            "step1": "Connect your Notion workspace in Settings to get started.",
+            "step2": "Your tasks and objectives will appear here automatically.",
+            "step3": "Stay focused with the minimalist, always-on-top window."
+        },
+        "shortcuts": {
+            "title": "Shortcuts",
+            "toggle": "Quick Toggle",
+            "hide": "Hide to Tray",
+            "refresh": "Refresh",
+            "settings": "Settings"
+        },
+        "button": "Get Started"
     }
 }

@@ -16,11 +16,13 @@
         "saving": "Đang lưu...",
         "saved": "Đã lưu",
         "tabs": {
+            "guide": "Hướng dẫn",
             "notion": "Notion",
             "behavior": "Hành vi",
             "window": "Cửa sổ"
         },
         "headers": {
+            "guide": "Hướng dẫn sử dụng",
             "notion": "Cấu hình Notion",
             "behavior": "Hành vi",
             "window": "Giao diện Cửa sổ",
@@ -68,5 +70,22 @@
     },
     "task": {
         "overdue": "Quá hạn"
+    },
+    "onboarding": {
+        "welcome": "Chào mừng đến với PlanIt!",
+        "intro": "Người bạn đồng hành năng suất của bạn.",
+        "steps": {
+            "step1": "Kết nối Notion trong Cài đặt để bắt đầu.",
+            "step2": "Công việc và mục tiêu sẽ tự động hiện ra.",
+            "step3": "Giữ sự tập trung với giao diện tối giản, luôn hiển thị."
+        },
+        "shortcuts": {
+            "title": "Phím tắt",
+            "toggle": "Bật/Tắt nhanh",
+            "hide": "Ẩn xuống khay",
+            "refresh": "Làm mới",
+            "settings": "Cài đặt"
+        },
+        "button": "Bắt đầu ngay"
     }
 }
