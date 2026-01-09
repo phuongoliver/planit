@@ -58,8 +58,7 @@ export function SettingsPage({ onSave, onBack, theme, currentOpacity }: Settings
       try {
         token = await invoke<string>('get_api_token');
       } catch (e) {
-        // If not in secure storage, check legacy store
-        token = await store.get<string>('notion_token') || '';
+        // Ignore error, token remains empty
       }
 
       const objId = await store.get<string>('objective_db_id');
@@ -76,8 +75,8 @@ export function SettingsPage({ onSave, onBack, theme, currentOpacity }: Settings
 
       setData({
         notionToken: token || '',
-        objectiveDbId: objId || '',
-        tasksDbId: taskId || '',
+        objectiveDbId: token ? (objId || '') : '',
+        tasksDbId: token ? (taskId || '') : '',
         anchorPosition: (anchor as any) || 'none',
         alwaysOnTop: onTop || false,
         windowOpacity: opacity || 0.9,
