@@ -1,0 +1,72 @@
+{
+    "app": {
+        "title": "PlanIt",
+        "theme": "Đổi giao diện",
+        "refresh": "Làm mới",
+        "settings": "Cài đặt",
+        "hide_tray": "Ẩn xuống khay hệ thống",
+        "configure_notion": "Cấu hình truy cập Notion trong cài đặt.",
+        "all_clear": "Hết việc cho hôm nay",
+        "loading": "Đang tải..."
+    },
+    "settings": {
+        "title": "Cài đặt",
+        "back": "Quay lại",
+        "save": "Lưu",
+        "saving": "Đang lưu...",
+        "saved": "Đã lưu",
+        "tabs": {
+            "notion": "Notion",
+            "behavior": "Hành vi",
+            "window": "Cửa sổ"
+        },
+        "headers": {
+            "notion": "Cấu hình Notion",
+            "behavior": "Hành vi",
+            "window": "Giao diện Cửa sổ",
+            "system": "Hệ thống",
+            "transparency": "Độ trong suốt",
+            "position": "Vị trí màn hình"
+        },
+        "notion": {
+            "info": "PlanIt cần quyền truy cập vào Notion để lấy danh sách công việc và mục tiêu.",
+            "token_label": "Integration Token",
+            "obj_db_label": "ID Cơ sở dữ liệu Mục tiêu",
+            "task_db_label": "ID Cơ sở dữ liệu Công việc",
+            "placeholder_token": "secret_...",
+            "placeholder_id": "32 ký tự"
+        },
+        "behavior": {
+            "autostart": {
+                "title": "Khởi động cùng Windows",
+                "desc": "Tự mở PlanIt khi mở máy"
+            },
+            "always_on_top": {
+                "title": "Luôn hiện trên cùng",
+                "desc": "Ghim cửa sổ lên trên các ứng dụng khác"
+            },
+            "language": {
+                "title": "Ngôn ngữ",
+                "desc": "Chọn ngôn ngữ hiển thị"
+            }
+        },
+        "window": {
+            "snap_desc": "Khi chọn, ứng dụng sẽ tự động dính vào góc này khi khởi động.",
+            "opacity": {
+                "title": "Độ trong suốt",
+                "desc": "Điều chỉnh độ mờ của cửa sổ"
+            },
+            "positions": {
+                "top_left": "Trái Trên",
+                "top_right": "Phải Trên",
+                "free": "Tự do",
+                "bot_left": "Trái Dưới",
+                "bot_right": "Phải Dưới"
+            }
+        },
+        "error_required": "Vui lòng nhập đầy đủ thông tin"
+    },
+    "task": {
+        "overdue": "Quá hạn"
+    }
+}

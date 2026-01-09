@@ -1,0 +1,72 @@
+{
+    "app": {
+        "title": "PlanIt",
+        "theme": "Toggle Theme",
+        "refresh": "Refresh Tasks",
+        "settings": "Settings",
+        "hide_tray": "Hide to Tray",
+        "configure_notion": "Configure Notion access in settings.",
+        "all_clear": "All tasks clear for today",
+        "loading": "Loading..."
+    },
+    "settings": {
+        "title": "Settings",
+        "back": "Back",
+        "save": "Save",
+        "saving": "Saving...",
+        "saved": "Saved",
+        "tabs": {
+            "notion": "Notion",
+            "behavior": "Behavior",
+            "window": "Window"
+        },
+        "headers": {
+            "notion": "Notion Setup",
+            "behavior": "Behavior",
+            "window": "Window Aesthetics",
+            "system": "System",
+            "transparency": "Transparency",
+            "position": "Screen Position"
+        },
+        "notion": {
+            "info": "PlanIt needs access to your Notion workspace to fetch tasks and objectives.",
+            "token_label": "Integration Token",
+            "obj_db_label": "Objectives DB ID",
+            "task_db_label": "Tasks DB ID",
+            "placeholder_token": "secret_...",
+            "placeholder_id": "32 chars"
+        },
+        "behavior": {
+            "autostart": {
+                "title": "Launch at Startup",
+                "desc": "Start PlanIt with Windows"
+            },
+            "always_on_top": {
+                "title": "Always on Top",
+                "desc": "Keep window above others"
+            },
+            "language": {
+                "title": "Language",
+                "desc": "Select your preferred language"
+            }
+        },
+        "window": {
+            "snap_desc": "When set, the app will snap to this corner on startup.",
+            "opacity": {
+                "title": "Glass Opacity",
+                "desc": "Adjust window transparency"
+            },
+            "positions": {
+                "top_left": "Top Left",
+                "top_right": "Top Right",
+                "free": "Free",
+                "bot_left": "Bot Left",
+                "bot_right": "Bot Right"
+            }
+        },
+        "error_required": "All fields are required"
+    },
+    "task": {
+        "overdue": "Overdue"
+    }
+}
