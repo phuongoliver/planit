@@ -179,6 +179,52 @@ fn delete_api_token() -> Result<(), String> {
     entry.delete_password().map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn fetch_databases(token: String) -> Result<Vec<notion::DatabaseInfo>, String> {
+    let client = reqwest::Client::new();
+
+    let query_body = serde_json::json!({
+        "filter": {
+            "value": "database",
+            "property": "object"
+        },
+        "page_size": 100
+    });
+
+    let res = client
+        .post("https://api.notion.com/v1/search")
+        .header("Authorization", format!("Bearer {}", token))
+        .header("Notion-Version", "2022-06-28")
+        .json(&query_body)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !res.status().is_success() {
+        let error_text = res.text().await.unwrap_or_default();
+        return Err(format!("Notion API Error: {}", error_text));
+    }
+
+    let search_res: notion::SearchResponse = res.json().await.map_err(|e| e.to_string())?;
+
+    let databases = search_res
+        .results
+        .into_iter()
+        .map(|db| {
+            let title = db
+                .title
+                .unwrap_or_default()
+                .first()
+                .map(|t| t.plain_text.clone())
+                .unwrap_or_else(|| "Untitled Database".to_string());
+
+            notion::DatabaseInfo { id: db.id, title }
+        })
+        .collect();
+
+    Ok(databases)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -186,6 +232,7 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec!["--flag1", "--flag2"]),
         ))
+        // ... (rest of plugins)
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_shortcut(tauri_plugin_global_shortcut::Shortcut::new(
@@ -201,9 +248,8 @@ pub fn run() {
                         use tauri::Manager;
                         if let Some(window) = app.get_webview_window("main") {
                             let is_visible = window.is_visible().unwrap_or(false);
-                            let is_focused = window.is_focused().unwrap_or(false);
-
-                            if is_visible && is_focused {
+                            // Simple Toggle Logic
+                            if is_visible {
                                 let _ = window.hide();
                             } else {
                                 let _ = window.show();
@@ -238,9 +284,7 @@ pub fn run() {
                     "show_hide" => {
                         if let Some(window) = app.get_webview_window("main") {
                             let is_visible = window.is_visible().unwrap_or(false);
-                            let is_focused = window.is_focused().unwrap_or(false);
-
-                            if is_visible && is_focused {
+                            if is_visible {
                                 let _ = window.hide();
                             } else {
                                 let _ = window.show();
@@ -286,7 +330,8 @@ pub fn run() {
             mark_task_complete,
             save_api_token,
             get_api_token,
-            delete_api_token
+            delete_api_token,
+            fetch_databases
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

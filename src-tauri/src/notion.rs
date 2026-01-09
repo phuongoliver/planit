@@ -11,7 +11,24 @@ pub struct Task {
     pub objective_deadline: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DatabaseInfo {
+    pub id: String,
+    pub title: String,
+}
+
 // Notion API Response Structures
+
+#[derive(Debug, Deserialize)]
+pub struct SearchResponse {
+    pub results: Vec<DatabaseObject>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DatabaseObject {
+    pub id: String,
+    pub title: Option<Vec<RichText>>, // Databases use 'title' array
+}
 
 #[derive(Debug, Deserialize)]
 pub struct QueryResponse {

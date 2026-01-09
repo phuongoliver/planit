@@ -3,11 +3,12 @@ import { invoke } from '@tauri-apps/api/core';
 import { Store } from '@tauri-apps/plugin-store';
 import {
   Settings, Save, AlertCircle, Layout, ArrowUpRight, ArrowDownRight, ArrowDownLeft, ArrowUpLeft, Maximize,
-  ChevronLeft, Database, AppWindow, Sliders, Zap, Globe
+  ChevronLeft, Database, AppWindow, Sliders, Zap, Globe, RefreshCw
 } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart';
 import { useTranslation } from 'react-i18next';
+import { OnboardingContent } from './OnboardingGuide';
 
 interface SettingsData {
   notionToken: string;
@@ -20,7 +21,7 @@ interface SettingsData {
   language: string;
 }
 
-type Tab = 'notion' | 'behavior' | 'window';
+type Tab = 'guide' | 'notion' | 'behavior' | 'window';
 
 export interface SettingsPageProps {
   readonly onSave: () => void;
@@ -42,9 +43,11 @@ export function SettingsPage({ onSave, onBack, theme, currentOpacity }: Settings
     autostart: false,
     language: i18n.language || 'en',
   });
-  const [activeTab, setActiveTab] = useState<Tab>('notion');
+  const [activeTab, setActiveTab] = useState<Tab>('guide');
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-  const [isSidebarOpen, setSidebarOpen] = useState(true); // Toggle for sidebar
+  const [isSidebarOpen] = useState(true); // Toggle for sidebar
+  const [availableDbs, setAvailableDbs] = useState<{ id: string, title: string }[]>([]);
+  const [isFetchingInfo, setIsFetchingInfo] = useState(false);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -191,6 +194,7 @@ export function SettingsPage({ onSave, onBack, theme, currentOpacity }: Settings
         </div>
 
         <nav className="flex-1 p-2 space-y-1">
+          <SidebarItem id="guide" icon={AlertCircle} label={t('settings.tabs.guide')} />
           <SidebarItem id="notion" icon={Database} label={t('settings.tabs.notion')} />
           <SidebarItem id="behavior" icon={Zap} label={t('settings.tabs.behavior')} />
           <SidebarItem id="window" icon={AppWindow} label={t('settings.tabs.window')} />
@@ -203,6 +207,7 @@ export function SettingsPage({ onSave, onBack, theme, currentOpacity }: Settings
         {/* Header for Mobile/Context */}
         <div data-tauri-drag-region className="h-16 flex items-center justify-between px-6 border-b border-brand-gray/20 dark:border-brand-gray/10 shrink-0 cursor-default select-none">
           <h2 data-tauri-drag-region className="text-xl font-bold pointer-events-none">
+            {activeTab === 'guide' && t('settings.headers.guide')}
             {activeTab === 'notion' && t('settings.headers.notion')}
             {activeTab === 'behavior' && t('settings.headers.behavior')}
             {activeTab === 'window' && t('settings.headers.window')}
@@ -226,6 +231,12 @@ export function SettingsPage({ onSave, onBack, theme, currentOpacity }: Settings
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-6">
 
+          {activeTab === 'guide' && (
+            <div className="max-w-md mx-auto animate-in fade-in slide-in-from-right-4 duration-300">
+              <OnboardingContent theme={theme} />
+            </div>
+          )}
+
           {activeTab === 'notion' && (
             <div className="space-y-6 max-w-md animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="bg-brand-primary/5 border border-brand-primary/20 p-4 rounded-lg flex gap-3 text-sm text-brand-dark/80 dark:text-brand-gray">
@@ -236,35 +247,84 @@ export function SettingsPage({ onSave, onBack, theme, currentOpacity }: Settings
               <div className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-brand-dark/70 dark:text-brand-gray">{t('settings.notion.token_label')}</label>
-                  <input
-                    type="password"
-                    value={data.notionToken}
-                    onChange={e => setData({ ...data, notionToken: e.target.value })}
-                    className="w-full p-2.5 rounded-lg border border-brand-gray/30 dark:border-brand-gray/20 bg-brand-gray/5 dark:bg-black/20 focus:ring-2 focus:ring-brand-primary outline-none transition-all"
-                    placeholder={t('settings.notion.placeholder_token')}
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      value={data.notionToken}
+                      onChange={e => setData({ ...data, notionToken: e.target.value })}
+                      className="flex-1 p-2.5 rounded-lg border border-brand-gray/30 dark:border-brand-gray/20 bg-brand-gray/5 dark:bg-black/20 focus:ring-2 focus:ring-brand-primary outline-none transition-all"
+                      placeholder={t('settings.notion.placeholder_token')}
+                    />
+                    <button
+                      onClick={async () => {
+                        if (!data.notionToken) {
+                          alert(t('settings.error_required'));
+                          return;
+                        }
+                        setIsFetchingInfo(true);
+                        try {
+                          const DBS = await invoke<{ id: string, title: string }[]>('fetch_databases', { token: data.notionToken });
+                          setAvailableDbs(DBS);
+                        } catch (e) {
+                          alert(`Failed to fetch databases: ${e}`);
+                        } finally {
+                          setIsFetchingInfo(false);
+                        }
+                      }}
+                      className="px-3 py-2 bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary rounded-lg transition-colors"
+                      title="Load databases"
+                    >
+                      {isFetchingInfo ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-brand-dark/70 dark:text-brand-gray">{t('settings.notion.obj_db_label')}</label>
-                  <input
-                    type="text"
-                    value={data.objectiveDbId}
-                    onChange={e => setData({ ...data, objectiveDbId: e.target.value })}
-                    className="w-full p-2.5 rounded-lg border border-brand-gray/30 dark:border-brand-gray/20 bg-brand-gray/5 dark:bg-black/20 focus:ring-2 focus:ring-brand-primary outline-none transition-all font-mono text-xs"
-                    placeholder={t('settings.notion.placeholder_id')}
-                  />
+                  {availableDbs.length > 0 ? (
+                    <select
+                      value={data.objectiveDbId}
+                      onChange={e => setData({ ...data, objectiveDbId: e.target.value })}
+                      className="w-full p-2.5 rounded-lg border border-brand-gray/30 dark:border-brand-gray/20 bg-brand-gray/5 dark:bg-black/20 focus:ring-2 focus:ring-brand-primary outline-none transition-all text-sm"
+                    >
+                      <option value="">Select Database...</option>
+                      {availableDbs.map(db => (
+                        <option key={db.id} value={db.id}>{db.title}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={data.objectiveDbId}
+                      onChange={e => setData({ ...data, objectiveDbId: e.target.value })}
+                      className="w-full p-2.5 rounded-lg border border-brand-gray/30 dark:border-brand-gray/20 bg-brand-gray/5 dark:bg-black/20 focus:ring-2 focus:ring-brand-primary outline-none transition-all font-mono text-xs"
+                      placeholder={t('settings.notion.placeholder_id')}
+                    />
+                  )}
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-brand-dark/70 dark:text-brand-gray">{t('settings.notion.task_db_label')}</label>
-                  <input
-                    type="text"
-                    value={data.tasksDbId}
-                    onChange={e => setData({ ...data, tasksDbId: e.target.value })}
-                    className="w-full p-2.5 rounded-lg border border-brand-gray/30 dark:border-brand-gray/20 bg-brand-gray/5 dark:bg-black/20 focus:ring-2 focus:ring-brand-primary outline-none transition-all font-mono text-xs"
-                    placeholder={t('settings.notion.placeholder_id')}
-                  />
+                  {availableDbs.length > 0 ? (
+                    <select
+                      value={data.tasksDbId}
+                      onChange={e => setData({ ...data, tasksDbId: e.target.value })}
+                      className="w-full p-2.5 rounded-lg border border-brand-gray/30 dark:border-brand-gray/20 bg-brand-gray/5 dark:bg-black/20 focus:ring-2 focus:ring-brand-primary outline-none transition-all text-sm"
+                    >
+                      <option value="">Select Database...</option>
+                      {availableDbs.map(db => (
+                        <option key={db.id} value={db.id}>{db.title}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={data.tasksDbId}
+                      onChange={e => setData({ ...data, tasksDbId: e.target.value })}
+                      className="w-full p-2.5 rounded-lg border border-brand-gray/30 dark:border-brand-gray/20 bg-brand-gray/5 dark:bg-black/20 focus:ring-2 focus:ring-brand-primary outline-none transition-all font-mono text-xs"
+                      placeholder={t('settings.notion.placeholder_id')}
+                    />
+                  )}
                 </div>
               </div>
             </div>
