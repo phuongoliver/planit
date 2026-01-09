@@ -81,19 +81,16 @@ async fn fetch_tasks(token: String, database_id: String) -> Result<Vec<Task>, St
             // We assume the user has created 'Objective Name' and 'Objective Deadline' rollups
             // derived from the 'Strategy' relation.
             let objective_name = match page.properties.get("Objective Name") {
-                Some(PropertyValue::Rollup { rollup }) => {
-                    match rollup {
-                        Some(RollupValue::Array { array }) => {
-                            // Find the first Title
-                            array.iter().find_map(|p| match p {
-                                RollupProperty::Title { title } => {
-                                    title.first().map(|t| t.plain_text.clone())
-                                }
-                                _ => None,
-                            })
+                Some(PropertyValue::Rollup {
+                    rollup: Some(RollupValue::Array { array }),
+                }) => {
+                    // Find the first Title
+                    array.iter().find_map(|p| match p {
+                        RollupProperty::Title { title } => {
+                            title.first().map(|t| t.plain_text.clone())
                         }
                         _ => None,
-                    }
+                    })
                 }
                 _ => None,
             };
@@ -107,12 +104,9 @@ async fn fetch_tasks(token: String, database_id: String) -> Result<Vec<Task>, St
                                 RollupProperty::Date { date } => {
                                     date.as_ref().map(|d| d.start.clone())
                                 }
-                                RollupProperty::Formula { formula } => match formula {
-                                    notion::FormulaValue::Date { date } => {
-                                        date.as_ref().map(|d| d.start.clone())
-                                    }
-                                    _ => None,
-                                },
+                                RollupProperty::Formula {
+                                    formula: notion::FormulaValue::Date { date },
+                                } => date.as_ref().map(|d| d.start.clone()),
                                 _ => None,
                             })
                         }
@@ -166,24 +160,111 @@ async fn mark_task_complete(token: String, page_id: String, completed: bool) -> 
     Ok(())
 }
 
+#[tauri::command]
+fn save_api_token(token: String) -> Result<(), String> {
+    let entry = keyring::Entry::new("planit-app", "notion-token").map_err(|e| e.to_string())?;
+    entry.set_password(&token).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn get_api_token() -> Result<String, String> {
+    let entry = keyring::Entry::new("planit-app", "notion-token").map_err(|e| e.to_string())?;
+    entry.get_password().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn delete_api_token() -> Result<(), String> {
+    let entry = keyring::Entry::new("planit-app", "notion-token").map_err(|e| e.to_string())?;
+    entry.delete_password().map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--flag1", "--flag2"]),
+        ))
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_shortcut(tauri_plugin_global_shortcut::Shortcut::new(
+                    Some(tauri_plugin_global_shortcut::Modifiers::CONTROL),
+                    tauri_plugin_global_shortcut::Code::Space,
+                ))
+                .unwrap()
+                .with_handler(|app: &tauri::AppHandle, shortcut, _event| {
+                    if shortcut.matches(
+                        tauri_plugin_global_shortcut::Modifiers::CONTROL,
+                        tauri_plugin_global_shortcut::Code::Space,
+                    ) {
+                        use tauri::Manager;
+                        if let Some(window) = app.get_webview_window("main") {
+                            let is_visible = window.is_visible().unwrap_or(false);
+                            let is_focused = window.is_focused().unwrap_or(false);
+
+                            if is_visible && is_focused {
+                                let _ = window.hide();
+                            } else {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                    }
+                })
+                .build(),
+        )
         .setup(|app| {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
-            use tauri::tray::{TrayIconBuilder, TrayIconEvent};
+            use tauri::menu::{Menu, MenuItem};
+            use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
             use tauri::Manager;
+
+            // Create tray menu
+            let show_hide = MenuItem::with_id(app, "show_hide", "Show/Hide", true, None::<&str>)?;
+            let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show_hide, &quit])?;
 
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
+                .menu(&menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| match event.id().as_ref() {
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    "show_hide" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let is_visible = window.is_visible().unwrap_or(false);
+                            let is_focused = window.is_focused().unwrap_or(false);
+
+                            if is_visible && is_focused {
+                                let _ = window.hide();
+                            } else {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                    }
+                    _ => {}
+                })
                 .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click { .. } = event {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
                         let app = tray.app_handle();
                         if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
+                            if window.is_visible().unwrap_or(false) {
+                                let _ = window.hide();
+                            } else {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
                         }
                     }
                 })
@@ -191,9 +272,22 @@ pub fn run() {
 
             Ok(())
         })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                // Prevent the window from closing and hide it instead
+                window.hide().unwrap();
+                api.prevent_close();
+            }
+        })
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![fetch_tasks, mark_task_complete])
+        .invoke_handler(tauri::generate_handler![
+            fetch_tasks,
+            mark_task_complete,
+            save_api_token,
+            get_api_token,
+            delete_api_token
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
