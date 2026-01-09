@@ -1,3 +1,6 @@
+<p align="center">
+  <img src="./app-icon.png" alt="PlanIt Logo" width="120">
+</p>
 <h1 align="center">PlanIt</h1>
 
 <p align="center">
