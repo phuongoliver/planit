@@ -2,30 +2,44 @@ import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Store } from "@tauri-apps/plugin-store";
 import { getCurrentWindow, PhysicalPosition, currentMonitor } from "@tauri-apps/api/window";
-import { Settings, RefreshCw, Moon, Sun } from "lucide-react";
+import { Settings, RefreshCw, Moon, Sun, X } from "lucide-react";
 import { Task } from "./types";
 import { TaskCard } from "./components/TaskCard";
 import { SettingsPage } from "./components/Settings";
 import { clsx } from "clsx";
+import { useTranslation } from "react-i18next";
 
 function App() {
+  const { t } = useTranslation();
   const [view, setView] = useState<"tasks" | "settings">("tasks");
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [isConfigured, setIsConfigured] = useState(false);
   const [credentials, setCredentials] = useState<{ token: string; dbId: string } | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
+  const [bgOpacity, setBgOpacity] = useState(0.9);
 
   useEffect(() => {
     const init = async () => {
       const store = await Store.load('settings.json');
-      const token = await store.get<string>('notion_token');
+
+      // Determine Token
+      let token = '';
+      try {
+        token = await invoke<string>('get_api_token');
+      } catch (e) {
+        // Fallback or not migrated yet
+        token = await store.get<string>('notion_token') || '';
+      }
+
       const taskDbId = await store.get<string>('tasks_db_id');
       const themePref = await store.get<string>('theme');
 
       // Window Settings
       const anchorPos = await store.get<string>('anchor_position');
       const alwaysOnTop = await store.get<boolean>('always_on_top');
+      const opacity = await store.get<number>('window_opacity');
+      if (opacity) setBgOpacity(opacity);
       applyWindowSettings(anchorPos, alwaysOnTop);
 
       if (themePref) {
@@ -121,7 +135,12 @@ function App() {
   };
 
   if (view === "settings") {
-    return <SettingsPage onSave={() => window.location.reload()} />;
+    return <SettingsPage
+      onSave={() => window.location.reload()}
+      onBack={() => setView("tasks")}
+      theme={theme}
+      currentOpacity={bgOpacity}
+    />;
   }
 
   // Sort tasks: Urgent (Do Date closest/passed) first? Or by creation?
@@ -129,20 +148,32 @@ function App() {
   const sortedTasks = [...tasks];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-brand-dark text-brand-dark dark:text-white font-sans selection:bg-brand-primary/30 transition-colors duration-300">
+    <div
+      className="min-h-screen text-brand-dark dark:text-white font-sans selection:bg-brand-primary/30 transition-colors duration-300"
+      style={{
+        backgroundColor: theme === 'dark'
+          ? `rgba(26, 30, 35, ${bgOpacity})` // brand-dark #1a1e23
+          : `rgba(255, 255, 255, ${bgOpacity})`
+      }}
+    >
 
       {/* Header - Minimalist & Glassy */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-2 sm:px-4 bg-white/80 dark:bg-brand-dark/80 backdrop-blur-md border-b border-brand-gray/20 dark:border-brand-gray/10">
-        <div className="flex items-center gap-2">
+      <header
+        className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-2 sm:px-4 bg-white/80 dark:bg-brand-dark/80 backdrop-blur-md border-b border-brand-gray/20 dark:border-brand-gray/10 select-none"
+      >
+        <div className="flex items-center gap-2 pointer-events-none">
           <img src={theme === "dark" ? "/logo-notext-light.png" : "/logo-notext-dark.png"} alt="PlanIt" className="w-8 h-8 object-contain" />
-          <span className="font-bold text-lg sm:text-xl tracking-tight text-brand-dark dark:text-white">PlanIt</span>
+          <span className="font-bold text-lg sm:text-xl tracking-tight text-brand-dark dark:text-white">{t('app.title')}</span>
         </div>
 
-        <div className="flex items-center gap-1">
+        {/* Draggable spacer */}
+        <div data-tauri-drag-region className="flex-1 h-full" />
+
+        <div className="flex items-center gap-1 pointer-events-auto">
           <button
             onClick={toggleTheme}
             className="p-2 rounded-full hover:bg-brand-gray/20 dark:hover:bg-white/10 transition-colors text-brand-dark/60 dark:text-white/60"
-            title="Toggle Theme"
+            title={t('app.theme')}
           >
             {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
           </button>
@@ -153,7 +184,7 @@ function App() {
               "p-2 rounded-full hover:bg-brand-gray/20 dark:hover:bg-white/10 transition-colors text-brand-dark/60 dark:text-white/60",
               loading && "animate-spin"
             )}
-            title="Refresh Tasks"
+            title={t('app.refresh')}
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -161,9 +192,19 @@ function App() {
           <button
             onClick={() => setView("settings")}
             className="p-2 rounded-full hover:bg-brand-gray/20 dark:hover:bg-white/10 transition-colors text-brand-dark/60 dark:text-white/60"
-            title="Settings"
+            title={t('app.settings')}
           >
             <Settings className="w-4 h-4" />
+          </button>
+
+          <div className="w-px h-4 bg-brand-gray/20 dark:bg-white/10 mx-1" />
+
+          <button
+            onClick={() => getCurrentWindow().hide()}
+            className="p-2 rounded-full hover:bg-red-500/10 hover:text-red-500 transition-colors text-brand-dark/60 dark:text-white/60"
+            title={t('app.hide_tray')}
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
       </header>
@@ -173,12 +214,12 @@ function App() {
 
         {!isConfigured ? (
           <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-50">
-            <p>Configure Notion access in settings.</p>
+            <p>{t('app.configure_notion')}</p>
           </div>
         ) : tasks.length === 0 && !loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-40">
             <div className="text-4xl">✨</div>
-            <p className="text-sm font-medium">All tasks clear for today</p>
+            <p className="text-sm font-medium">{t('app.all_clear')}</p>
           </div>
         ) : (
           <div className="rounded-xl bg-white/50 dark:bg-brand-dark/50 shadow-sm border border-brand-gray/20 dark:border-brand-gray/10 backdrop-blur-sm">
@@ -198,5 +239,6 @@ function App() {
     </div >
   );
 }
+
 
 export default App;

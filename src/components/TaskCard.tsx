@@ -3,6 +3,7 @@ import { Task } from "../types";
 import { invoke } from "@tauri-apps/api/core";
 import { clsx } from "clsx";
 import { differenceInMilliseconds, differenceInHours, parseISO, format } from "date-fns";
+import { useTranslation } from "react-i18next";
 
 interface TaskCardProps {
   task: Task;
@@ -12,6 +13,7 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, index, onComplete, notionToken }: TaskCardProps) {
+  const { t } = useTranslation();
   const [complete, setComplete] = useState(task.status === "Done");
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [objectiveRemaining, setObjectiveRemaining] = useState<string>("");
@@ -34,7 +36,7 @@ export function TaskCard({ task, index, onComplete, notionToken }: TaskCardProps
 
       if (diffMs < 0) {
         status = "overdue";
-        return { str: "Overdue", status };
+        return { str: t("task.overdue"), status };
       }
 
       if (diffHrs < 3) {
@@ -118,7 +120,7 @@ export function TaskCard({ task, index, onComplete, notionToken }: TaskCardProps
 
           {/* Countdown / Deadline - compact */}
           <div className="flex items-center gap-2 text-xs font-mono shrink-0">
-            {displayDate && <span className="text-[#5f7c8c] hidden xs:block">{displayDate}</span>}
+            {displayDate && <span className="text-[#5f7c8c] dark:text-white hidden xs:block">{displayDate}</span>}
 
             {timeRemaining && !complete && (
               <span className={clsx(
@@ -134,7 +136,7 @@ export function TaskCard({ task, index, onComplete, notionToken }: TaskCardProps
         {/* Bottom Row: Objective / Context (Italicized) */}
         {(task.objective_name || task.objective_deadline) && (
           // TODO(good-first-issue): Replace hardcoded hex color '#5f7c8c' with a Tailwind class or theme variable.
-          <div className="pl-6 text-[10px] sm:text-xs text-[#5f7c8c] italic flex items-center justify-between gap-2">
+          <div className="pl-6 text-[10px] sm:text-xs text-[#5f7c8c] dark:text-white italic flex items-center justify-between gap-2">
             <span className="truncate flex-1">{task.objective_name}</span>
             <div className="flex items-center gap-2 font-mono shrink-0">
               {task.objective_deadline && (
