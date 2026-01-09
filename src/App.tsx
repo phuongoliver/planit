@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Store } from "@tauri-apps/plugin-store";
+import { getCurrentWindow, PhysicalPosition, currentMonitor } from "@tauri-apps/api/window";
 import { Settings, RefreshCw, Moon, Sun } from "lucide-react";
 import { Task } from "./types";
 import { TaskCard } from "./components/TaskCard";
@@ -22,6 +23,11 @@ function App() {
       const taskDbId = await store.get<string>('tasks_db_id');
       const themePref = await store.get<string>('theme');
 
+      // Window Settings
+      const anchorPos = await store.get<string>('anchor_position');
+      const alwaysOnTop = await store.get<boolean>('always_on_top');
+      applyWindowSettings(anchorPos, alwaysOnTop);
+
       if (themePref) {
         setTheme(themePref as "light" | "dark");
         if (themePref === "dark") document.documentElement.classList.add("dark");
@@ -41,6 +47,50 @@ function App() {
     };
     init();
   }, []);
+
+  const applyWindowSettings = async (anchor: string | null | undefined, alwaysOnTop: boolean | null | undefined) => {
+    const appWindow = getCurrentWindow();
+
+    // Apply Always on Top
+    if (alwaysOnTop !== undefined && alwaysOnTop !== null) {
+      await appWindow.setAlwaysOnTop(alwaysOnTop);
+    }
+
+    // Apply Anchor Position
+    if (anchor && anchor !== 'none') {
+      const monitor = await currentMonitor();
+      if (!monitor) return;
+
+      const windowSize = await appWindow.innerSize();
+      const screenWidth = monitor.size.width;
+      const screenHeight = monitor.size.height;
+
+      const PADDING = 24; // Aesthetic padding
+      let x = 0;
+      let y = 0;
+
+      switch (anchor) {
+        case 'top-left':
+          x = PADDING;
+          y = PADDING;
+          break;
+        case 'top-right':
+          x = screenWidth - windowSize.width - PADDING;
+          y = PADDING;
+          break;
+        case 'bottom-left':
+          x = PADDING;
+          y = screenHeight - windowSize.height - PADDING;
+          break;
+        case 'bottom-right':
+          x = screenWidth - windowSize.width - PADDING;
+          y = screenHeight - windowSize.height - PADDING;
+          break;
+      }
+
+      await appWindow.setPosition(new PhysicalPosition(x, y));
+    }
+  };
 
   const fetchTasks = async (token: string, dbId: string) => {
     setLoading(true);
@@ -76,31 +126,31 @@ function App() {
 
   // Sort tasks: Urgent (Do Date closest/passed) first? Or by creation?
   // Use simplistic sorting for now.
-  const sortedTasks = [...tasks]; 
+  const sortedTasks = [...tasks];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans selection:bg-sky-500/30 transition-colors duration-300">
-      
+    <div className="min-h-screen bg-white dark:bg-brand-dark text-brand-dark dark:text-white font-sans selection:bg-brand-primary/30 transition-colors duration-300">
+
       {/* Header - Minimalist & Glassy */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-12 flex items-center justify-between px-4 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50">
+      <header className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-2 sm:px-4 bg-white/80 dark:bg-brand-dark/80 backdrop-blur-md border-b border-brand-gray/20 dark:border-brand-gray/10">
         <div className="flex items-center gap-2">
-            {/* Subtle branding or just empty space for cleaner look */}
-            <div className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
+          <img src={theme === "dark" ? "/logo-notext-light.png" : "/logo-notext-dark.png"} alt="PlanIt" className="w-8 h-8 object-contain" />
+          <span className="font-bold text-lg sm:text-xl tracking-tight text-brand-dark dark:text-white">PlanIt</span>
         </div>
-        
+
         <div className="flex items-center gap-1">
-          <button 
+          <button
             onClick={toggleTheme}
-            className="p-2 rounded-full hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors text-slate-500 dark:text-slate-400"
+            className="p-2 rounded-full hover:bg-brand-gray/20 dark:hover:bg-white/10 transition-colors text-brand-dark/60 dark:text-white/60"
             title="Toggle Theme"
           >
             {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
           </button>
-          
-          <button 
+
+          <button
             onClick={() => credentials && fetchTasks(credentials.token, credentials.dbId)}
             className={clsx(
-              "p-2 rounded-full hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors text-slate-500 dark:text-slate-400",
+              "p-2 rounded-full hover:bg-brand-gray/20 dark:hover:bg-white/10 transition-colors text-brand-dark/60 dark:text-white/60",
               loading && "animate-spin"
             )}
             title="Refresh Tasks"
@@ -108,9 +158,9 @@ function App() {
             <RefreshCw className="w-4 h-4" />
           </button>
 
-          <button 
+          <button
             onClick={() => setView("settings")}
-            className="p-2 rounded-full hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors text-slate-500 dark:text-slate-400"
+            className="p-2 rounded-full hover:bg-brand-gray/20 dark:hover:bg-white/10 transition-colors text-brand-dark/60 dark:text-white/60"
             title="Settings"
           >
             <Settings className="w-4 h-4" />
@@ -119,32 +169,33 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="pt-16 pb-8 px-4 max-w-2xl mx-auto flex flex-col gap-4">
-        
+      <main className="pt-16 pb-8 px-2 sm:px-4 max-w-2xl mx-auto flex flex-col gap-4">
+
         {!isConfigured ? (
-           <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-50">
-             <p>Configure Notion access in settings.</p>
-           </div>
+          <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-50">
+            <p>Configure Notion access in settings.</p>
+          </div>
         ) : tasks.length === 0 && !loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-40">
-             <div className="text-4xl">✨</div>
-             <p className="text-sm font-medium">All tasks clear for today</p>
+            <div className="text-4xl">✨</div>
+            <p className="text-sm font-medium">All tasks clear for today</p>
           </div>
         ) : (
-          <div className="rounded-lg bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800">
-             {sortedTasks.map((task, idx) => (
-                <TaskCard 
-                  key={task.id} 
-                  task={task} 
-                  index={idx}
-                  notionToken={credentials?.token || ''}
-                  onComplete={() => {}}
-                />
-             ))}
+          <div className="rounded-xl bg-white/50 dark:bg-brand-dark/50 shadow-sm border border-brand-gray/20 dark:border-brand-gray/10 backdrop-blur-sm">
+            {sortedTasks.map((task, idx) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                index={idx}
+                notionToken={credentials?.token || ''}
+                onComplete={() => { }}
+              />
+            ))}
           </div>
-        )}
-      </main>
-    </div>
+        )
+        }
+      </main >
+    </div >
   );
 }
 

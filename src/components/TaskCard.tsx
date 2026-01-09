@@ -14,62 +14,75 @@ interface TaskCardProps {
 export function TaskCard({ task, index, onComplete, notionToken }: TaskCardProps) {
   const [complete, setComplete] = useState(task.status === "Done");
   const [timeRemaining, setTimeRemaining] = useState<string>("");
+  const [objectiveRemaining, setObjectiveRemaining] = useState<string>("");
   const [urgency, setUrgency] = useState<"normal" | "urgent" | "overdue">("normal");
 
   useEffect(() => {
     if (complete) return;
 
-    const calcTime = () => {
-      if (!task.do_date) return "";
-      
+    const calcTime = (dateStr: string | null) => {
+      if (!dateStr) return { str: "", status: "normal" as const };
+
       const now = new Date();
-      const targetStr = task.do_date.includes("T") ? task.do_date : `${task.do_date}T23:59:59`;
+      const targetStr = dateStr.includes("T") ? dateStr : `${dateStr}T23:59:59`;
       const target = parseISO(targetStr);
-      
+
       const diffMs = differenceInMilliseconds(target, now);
       const diffHrs = differenceInHours(target, now);
 
+      let status: "normal" | "urgent" | "overdue" = "normal";
+
       if (diffMs < 0) {
-        setUrgency("overdue");
-        return "Overdue";
+        status = "overdue";
+        return { str: "Overdue", status };
       }
 
       if (diffHrs < 3) {
-        setUrgency("urgent");
+        status = "urgent";
         // HH:MM:SS
         const h = Math.floor(diffMs / 3600000);
         const m = Math.floor((diffMs % 3600000) / 60000);
         const s = Math.floor((diffMs % 60000) / 1000);
-        return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        return { str: `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`, status };
+      } else if (diffHrs < 72) { // Show hours if < 3 days
+        return { str: `${diffHrs}h`, status };
       } else {
-        setUrgency("normal");
-        return `${diffHrs}h`;
+        const days = Math.floor(diffHrs / 24);
+        return { str: `${days}d`, status };
       }
     };
 
-    const str = calcTime();
-    setTimeRemaining(str);
-    
+    const updateTimes = () => {
+      const taskTime = calcTime(task.do_date);
+      setTimeRemaining(taskTime.str);
+      setUrgency(taskTime.status);
+
+      const objTime = calcTime(task.objective_deadline);
+      setObjectiveRemaining(objTime.str);
+    }
+
+    updateTimes();
+
     const interval = setInterval(() => {
-       setTimeRemaining(calcTime());
+      updateTimes();
     }, urgency === "urgent" ? 1000 : 60000);
 
     return () => clearInterval(interval);
-  }, [task.do_date, complete, urgency]);
+  }, [task.do_date, task.objective_deadline, complete, urgency]);
 
 
   const handleCheck = async () => {
     const newState = !complete;
     setComplete(newState);
     if (newState) {
-        onComplete(task.id);
+      onComplete(task.id);
     }
-    
+
     try {
-        await invoke("mark_task_complete", { token: notionToken, pageId: task.id, completed: newState });
+      await invoke("mark_task_complete", { token: notionToken, pageId: task.id, completed: newState });
     } catch (e) {
-        console.error("Failed to sync completion", e);
-        setComplete(!newState); // Revert on failure
+      console.error("Failed to sync completion", e);
+      setComplete(!newState); // Revert on failure
     }
   };
 
@@ -77,54 +90,63 @@ export function TaskCard({ task, index, onComplete, notionToken }: TaskCardProps
   const displayDate = task.do_date ? format(parseISO(task.do_date), "MMM d") : "";
 
   return (
-    <div 
+    <div
       className={clsx(
-        "w-full py-3 px-3 transition-colors duration-200 border-b border-slate-100 dark:border-slate-800 last:border-0",
+        "w-full py-2 px-2 transition-colors duration-200 border-b border-brand-gray/20 dark:border-brand-gray/10 last:border-0",
         complete ? "opacity-50" : "",
-        !complete && urgency === "urgent" ? "bg-red-50 dark:bg-red-900/20" : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
+        !complete && urgency === "urgent" ? "bg-red-50 dark:bg-red-900/20" : "hover:bg-brand-gray/10 dark:hover:bg-brand-gray/5"
       )}
     >
-      <div className="flex flex-col gap-1">
-          {/* Top Row: Number, Title, Countdown */}
-          <div className="flex items-center gap-3">
-              {/* Checkbox / Number Wrapper */}
-              <div className="flex items-center gap-2 min-w-[24px]">
-                  <span className="text-slate-400 text-sm font-mono w-4 text-right">{index + 1}.</span>
-                  <input 
-                    type="checkbox"
-                    checked={complete}
-                    onChange={handleCheck}
-                    className="accent-slate-900 dark:accent-sky-500 cursor-pointer w-4 h-4"
-                  />
-              </div>
-
-              {/* Title */}
-              <div className={clsx("flex-1 text-sm font-medium text-slate-900 dark:text-slate-100 truncate", complete && "line-through decoration-slate-400")}>
-                  {task.title}
-              </div>
-
-              {/* Countdown / Deadline */}
-              <div className="flex items-center gap-4 text-xs font-mono">
-                  {displayDate && <span className="text-slate-400 hidden sm:block">{displayDate}</span>}
-                  
-                  {timeRemaining && !complete && (
-                       <span className={clsx(
-                          "font-bold w-16 text-right",
-                          urgency === "urgent" ? "text-red-500 animate-pulse" : "text-slate-500 dark:text-slate-400"
-                       )}>
-                          {timeRemaining}
-                       </span>
-                  )}
-              </div>
+      <div className="flex flex-col gap-0.5">
+        {/* Top Row: Number, Title, Countdown */}
+        <div className="flex items-center gap-2">
+          {/* Checkbox / Number Wrapper */}
+          <div className="flex items-center gap-1 min-w-[20px] shrink-0">
+            <span className="text-brand-gray dark:text-slate-400 text-xs font-mono w-3 text-right">{index + 1}.</span>
+            <input
+              type="checkbox"
+              checked={complete}
+              onChange={handleCheck}
+              className="accent-brand-primary cursor-pointer w-3.5 h-3.5"
+            />
           </div>
-          
-          {/* Bottom Row: Objective / Context (Italicized) */}
-          {(task.objective_name || task.objective_deadline) && (
-              <div className="pl-10 text-xs text-slate-500 dark:text-slate-400 italic">
-                  {task.objective_name} 
-                  {task.objective_deadline && ` • ${task.objective_deadline}`}
-              </div>
-          )}
+
+          {/* Title - allow shrinking but prioritize text visibility */}
+          <div className={clsx("flex-1 min-w-0 text-sm font-medium text-brand-dark dark:text-white truncate", complete && "line-through decoration-brand-gray")}>
+            {task.title}
+          </div>
+
+          {/* Countdown / Deadline - compact */}
+          <div className="flex items-center gap-2 text-xs font-mono shrink-0">
+            {displayDate && <span className="text-[#5f7c8c] hidden xs:block">{displayDate}</span>}
+
+            {timeRemaining && !complete && (
+              <span className={clsx(
+                "font-bold text-right min-w-[2rem]",
+                urgency === "urgent" ? "text-red-500 animate-pulse" : "text-brand-primary dark:text-sky-400"
+              )}>
+                {timeRemaining}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom Row: Objective / Context (Italicized) */}
+        {(task.objective_name || task.objective_deadline) && (
+          <div className="pl-6 text-[10px] sm:text-xs text-[#5f7c8c] italic flex items-center justify-between gap-2">
+            <span className="truncate flex-1">{task.objective_name}</span>
+            <div className="flex items-center gap-2 font-mono shrink-0">
+              {task.objective_deadline && (
+                <span className="hidden xs:inline">{format(parseISO(task.objective_deadline), "MMM d")}</span>
+              )}
+              {objectiveRemaining && (
+                <span className="text-right font-bold opacity-90">
+                  {objectiveRemaining}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
