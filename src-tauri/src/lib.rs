@@ -162,20 +162,20 @@ async fn mark_task_complete(token: String, page_id: String, completed: bool) -> 
 
 #[tauri::command]
 fn save_api_token(token: String) -> Result<(), String> {
-    let entry = keyring::Entry::new("planit-app", "notion-token").map_err(|e| e.to_string())?;
+    let entry = keyring::Entry::new("planit-app-v2", "notion-token").map_err(|e| e.to_string())?;
     entry.set_password(&token).map_err(|e| e.to_string())?;
     Ok(())
 }
 
 #[tauri::command]
 fn get_api_token() -> Result<String, String> {
-    let entry = keyring::Entry::new("planit-app", "notion-token").map_err(|e| e.to_string())?;
+    let entry = keyring::Entry::new("planit-app-v2", "notion-token").map_err(|e| e.to_string())?;
     entry.get_password().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn delete_api_token() -> Result<(), String> {
-    let entry = keyring::Entry::new("planit-app", "notion-token").map_err(|e| e.to_string())?;
+    let entry = keyring::Entry::new("planit-app-v2", "notion-token").map_err(|e| e.to_string())?;
     entry.delete_password().map_err(|e| e.to_string())
 }
 
