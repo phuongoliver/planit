@@ -12,11 +12,48 @@ PlanIt is a [Tauri](https://tauri.app/) application, meaning it has two distinct
   - `src/components`: Reusable UI components (TaskCard, Settings, etc.).
   - `src/App.tsx`: The main entry point and layout.
   - `src/index.css`: Global styles and Tailwind directives.
+  - `src/locales`: I18n translation files.
 
 - **Backend (`/src-tauri`)**: The Rust core that handles system interactions and data syncing.
   - `src-tauri/src/main.rs`: The entry point for the Rust backend.
   - `src-tauri/src/lib.rs`: Shared library logic.
   - `src-tauri/tauri.conf.json`: Tauri configuration (windows, icons, permissions).
+
+## 🌍 Contributing Translations
+
+PlanIt supports multiple languages, and we'd love your help translating it into yours!
+
+### How to add a new language:
+
+1.  **Duplicate the English Locale**:
+    Copy the folder `src/locales/en` and rename it to your language code (e.g., `fr` for French, `es` for Spanish).
+    ```bash
+    cp -r src/locales/en src/locales/fr
+    ```
+
+2.  **Translate Values**:
+    Open `src/locales/[your-lang]/translation.json` and translate the values on the right side. Do **not** change the keys (left side).
+
+3.  **Register the Language**:
+    Open `src/i18n.ts` and import your new translation file:
+    ```typescript
+    import frTranslation from './locales/fr/translation.json';
+    
+    // ... inside i18n.init resources:
+    resources: {
+      en: { translation: enTranslation },
+      fr: { translation: frTranslation }, // Add this line
+    }
+    ```
+
+4.  **Add to Settings**:
+    Open `src/components/Settings.tsx` and add your language to the dropdown options in the `language` select element:
+    ```tsx
+    <option value="fr">Français</option>
+    ```
+
+5.  **Submit a Pull Request**:
+    Push your changes and open a PR!
 
 ## 🎨 Code Style
 

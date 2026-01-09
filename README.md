@@ -16,6 +16,15 @@
 - **Objective Alignment**: Displays task relation to higher-level objectives (via Notion Rollups).
 - **Secure**: Your Notion API token is stored locally on your device, never sent to third-party servers.
 
+## 📥 Download
+
+You can download the latest version of PlanIt from our **[Releases Page](https://github.com/phuongoliver/planit/releases)**.
+
+**For Windows:**
+1. Download the `.msi` or `.exe` file (e.g., `PlanIt_x.x.x_x64_en-US.msi`).
+2. Double-click the file to install.
+3. PlanIt will launch automatically.
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -24,11 +33,11 @@
 - **Rust** & **Cargo** (v1.70 or newer)
 - **Microsoft Visual Studio C++ Build Tools** (Windows only)
 
-### Installation
+### Building from Source
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/planit.git
+   git clone https://github.com/phuongoliver/planit.git
    cd planit
    ```
 
